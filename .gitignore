@@ -1,0 +1,8 @@
+dataset/
+output/
+code/business_entity_resolution/cache/
+code/business_entity_resolution/src/_probe.py
+__pycache__/
+*.parquet
+*.log
+.DS_Store
