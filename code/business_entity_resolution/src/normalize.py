@@ -50,6 +50,15 @@ ADDR = {
 ADDR_DROP = {"unit", "number", "apartment", "suite", "floor", "the", "of", "null",
              "na", "c", "o", "co"}
 
+# French records: elided articles, "st" = saint, "n"/"no" = numero, bis/ter suffixes
+FR_STOP = {"de", "du", "des", "la", "le", "les", "au", "aux", "d", "l", "et", "en", "sur"}
+FR_ADDR = {"st": "saint", "ste": "sainte", "n": "number", "no": "number", "bis": "number",
+           "ter": "number", "all": "allee", "espl": "esplanade", "qu": "quai", "che": "chemin",
+           "sq": "square", "crs": "cours", "pass": "passage", "rpt": "rondpoint"}
+FR_LEGAL = {"ei": "ei", "cie": "co", "compagnie": "co", "ets": "ets", "groupe": "group",
+            "sca": "sca", "scp": "scp", "selarl": "selarl", "scm": "scm"}
+CORE_DROP = CORE_DROP | {"ei", "ets", "sca", "scp", "selarl", "scm"}
+
 US_STATES = {
     "alabama": "al", "alaska": "ak", "arizona": "az", "arkansas": "ar",
     "california": "ca", "colorado": "co", "connecticut": "ct", "delaware": "de",
@@ -163,13 +172,18 @@ def _legal_sq():
     return _LEGAL_SQ
 
 
-def name_tokens(raw):
+def name_tokens(raw, country=""):
+    fr = country.strip().lower() == "france"
     s = _ascii(raw).replace("&", " and ").replace("+", " and ")
-    s = s.replace("'", "").replace(".", "")
+    s = s.replace("'", " " if fr else "").replace(".", "")
     s = _non_alnum.sub(" ", s)
     toks = []
     for t in s.split():
         t = _fix_leet(t)
+        if fr:
+            if t in FR_STOP:
+                continue
+            t = FR_LEGAL.get(t, t)
         if t in LEGAL:
             t = LEGAL[t]
         elif len(t) >= 5:
@@ -193,7 +207,8 @@ def addr_tokens(raw, country):
     if ckey in _STATE_RE:
         m = _STATE_MAP[ckey]
         s = _STATE_RE[ckey].sub(lambda x: " st_" + m[x.group(1)] + " ", s)
-    s = s.replace("'", "")
+    fr = ckey == "france"
+    s = s.replace("'", " " if fr else "")
     # keep hyphen/slash numbers together: "7-153", "3/115"
     s = re.sub(r"(\d)\s*[-/]\s*(\d)", r"\1_\2", s)
     s = re.sub(r"[^a-z0-9_ ,]+", " ", s)
@@ -205,6 +220,10 @@ def addr_tokens(raw, country):
             continue
         out = []
         for t in parts:
+            if fr:
+                if t in FR_STOP:
+                    continue
+                t = FR_ADDR.get(t, t)
             t = ORDINALS.get(t, t)
             if t[0].isdigit():
                 t = _num(t)
@@ -223,7 +242,7 @@ def _codes(ckey):
 
 
 def normalize_record(name, addr, country):
-    ntoks = name_tokens(name)
+    ntoks = name_tokens(name, country)
     core = core_name(ntoks)
     segs = addr_tokens(addr, country)
     atoks = []
