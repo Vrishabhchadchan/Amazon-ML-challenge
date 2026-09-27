@@ -36,4 +36,16 @@ Then validate:
 python utils/validate_submission.py --matching output/matching_results.tsv --candidate output/candidate_pairs.tsv --test-dir dataset/test
 ```
 
-Hardware used: 12-core CPU, 16 GB RAM. No GPU needed.
+## Runtime
+
+Measured on a 12-thread laptop with 16 GB RAM (no GPU needed):
+
+| step | time |
+|---|---|
+| prep (per split) | ~2 min |
+| candidates (per split) | ~80-90 min |
+| train | ~50 min |
+| predict | ~50 min |
+
+Peak memory is about 9 GB during training, so don't run blocking and training at the same time.
+`src/errors.py` optionally re-scores held-out train entities and prints example mistakes.
